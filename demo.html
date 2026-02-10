@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>inflate-raw.js Demo – Raw DEFLATE (base64 input)</title>
+  <script src="https://cdn.jsdelivr.net/gh/js-vanilla/inflate-raw@main/inflate-raw.min.js"></script>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      line-height: 1.6;
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f9fafb;
+      color: #111;
+    }
+    .container {
+      background: white;
+      padding: 28px;
+      border-radius: 10px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    }
+    h1 { color: #1e40af; margin-bottom: 0.5em; }
+    h2 { color: #374151; margin: 2.5em 0 1em; border-bottom: 1px solid #e5e7eb; padding-bottom: 0.5em; }
+    textarea {
+      width: 100%;
+      min-height: 120px;
+      padding: 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-family: ui-monospace, monospace;
+      resize: vertical;
+    }
+    button {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+      margin: 12px 12px 12px 0;
+    }
+    button:hover { background: #1d4ed8; }
+    .output {
+      background: #f1f5f9;
+      border-left: 4px solid #2563eb;
+      padding: 14px 16px;
+      margin: 10px 0;
+      border-radius: 4px;
+      font-family: ui-monospace, monospace;
+      white-space: pre-wrap;
+      word-break: break-all;
+      min-height: 2.5em;
+    }
+    .status-ok  { color: #15803d; font-weight: 600; }
+    .status-err { color: #b91c1c; font-weight: 600; }
+    .note { font-size: 0.92em; color: #4b5563; margin: 1.2em 0; }
+    .stats { margin: 1em 0; font-weight: 500; }
+    .hex { font-size: 0.9em; color: #374151; letter-spacing: 0.4px; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>inflate-raw.js Demo</h1>
+  <p>
+    Very lightweight raw DEFLATE decompressor (RFC 1951 – no zlib/gzip headers).<br>
+    <strong>API note:</strong> <code>inflateRaw(base64String)</code> → returns decoded <code>string</code>
+  </p>
+
+  <h2>1. Static Test – Hardcoded base64 raw DEFLATE</h2>
+  <p>Decompresses the string: <code>"80jNycnXUSjJyCxWAKG8tJzEktQUhbSi/FyFosRyhaTKktRiRQA="</code></p>
+
+  <button onclick="runStaticTest()">Run Static Test</button>
+  <div id="static-output" class="output">Click button to decompress…</div>
+
+  <h2>2. Interactive Round-trip Test</h2>
+  <p>
+    Enter text → browser compresses it (raw deflate) → convert to base64 → decompress with <code>inflateRaw</code>
+  </p>
+  <p class="note">
+    Requires modern browser with <strong>CompressionStream('deflate-raw')</strong> support<br>
+    (Chrome/Edge ≥80, Firefox ≥113, Safari ≥16.4)
+  </p>
+
+  <textarea id="input-text">The quick brown fox jumps over the lazy dog. The quick brown fox jumps over the lazy dog again! 1234567890 → compression works best with repetition. 🎈</textarea>
+
+  <div>
+    <button onclick="runInteractiveTest()">Compress → Decompress</button>
+    <button onclick="clearAll()">Clear</button>
+  </div>
+
+  <div class="stats">
+    Original size: <span id="orig-size">-</span> bytes  | 
+    Compressed size: <span id="comp-size">-</span> bytes
+  </div>
+
+  <strong>Compressed data (base64):</strong>
+  <div id="base64-output" class="output hex">-</div>
+
+  <strong>Decompressed result:</strong>
+  <div id="final-output" class="output" style="color:#1e40af; min-height:80px;">-</div>
+</div>
+
+<script>
+// Helper: Uint8Array → base64 string
+function bytesToBase64(bytes) {
+  let binary = '';
+  const len = bytes.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
+// Helper: base64 string → Uint8Array (not needed here, but useful for reference)
+function base64ToBytes(base64) {
+  const binary = atob(base64);
+  const len = binary.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
+function runStaticTest() {
+  const output = document.getElementById('static-output');
+
+  // Base64 of raw DEFLATE stream for: "Hello, this is inflated from raw bytes!"
+  // (produced via CompressionStream('deflate-raw') on the target string)
+  const base64Data = "80jNycnXUSjJyCxWAKG8tJzEktQUhbSi/FyFosRyhaTKktRiRQA=";
+
+  try {
+    const decompressed = inflateRaw(base64Data);
+    output.innerHTML = `<span class="status-ok">Success!</span><br>${decompressed.replace(/&/g,'&amp;').replace(/</g,'&lt;')}`;
+  } catch (err) {
+    output.innerHTML = `<span class="status-err">Error:</span> ${err.message}`;
+  }
+}
+
+async function runInteractiveTest() {
+  const inputEl    = document.getElementById('input-text');
+  const origSizeEl = document.getElementById('orig-size');
+  const compSizeEl = document.getElementById('comp-size');
+  const b64El      = document.getElementById('base64-output');
+  const finalEl    = document.getElementById('final-output');
+
+  const text = inputEl.value.trim();
+  if (!text) {
+    finalEl.innerHTML = '<span class="status-err">Please enter some text first.</span>';
+    return;
+  }
+
+  finalEl.textContent = 'Compressing…';
+  b64El.textContent = 'Compressing…';
+
+  try {
+    // 1. Compress with native raw deflate
+    const cs = new CompressionStream('deflate-raw');
+    const writer = cs.writable.getWriter();
+    writer.write(new TextEncoder().encode(text));
+    writer.close();
+
+    const chunks = [];
+    for await (const chunk of cs.readable) chunks.push(chunk);
+
+    const totalLen = chunks.reduce((sum, c) => sum + c.length, 0);
+    const compressed = new Uint8Array(totalLen);
+    let offset = 0;
+    for (const chunk of chunks) {
+      compressed.set(chunk, offset);
+      offset += chunk.length;
+    }
+
+    origSizeEl.textContent = new TextEncoder().encode(text).length;
+    compSizeEl.textContent = totalLen;
+
+    // 2. Convert to base64 (what inflateRaw expects)
+    const b64 = bytesToBase64(compressed);
+    b64El.textContent = b64.length > 180 ? b64.slice(0, 180) + '…' : b64;
+
+    // 3. Decompress
+    const result = inflateRaw(b64);
+    finalEl.textContent = result;
+
+    if (result !== text) {
+      finalEl.innerHTML += '<br><br><span class="status-err">Warning: round-trip mismatch!</span>';
+    }
+
+  } catch (err) {
+    finalEl.innerHTML = `<span class="status-err">Error:</span> ${err.message}<br><small>(Browser may not support CompressionStream('deflate-raw'))</small>`;
+    b64El.textContent = '-';
+  }
+}
+
+function clearAll() {
+  document.getElementById('base64-output').textContent = '-';
+  document.getElementById('final-output').textContent = '-';
+  document.getElementById('orig-size').textContent = '-';
+  document.getElementById('comp-size').textContent = '-';
+}
+</script>
+</body>
+</html>
