@@ -40,8 +40,8 @@ This makes it ideal when **bundle size, cold-start time, and memory behavior** m
 
 ### 🔹 Extremely small footprint
 
-* ~3–4 KB minified
-* ~1.5–2 KB gzipped
+* ~4 KB minified (4.01 kB)
+* ~1.8–2.5 KB gzipped (2.22 kB)
 * No dependencies
 * No polyfills required
 
