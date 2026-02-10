@@ -24,11 +24,12 @@
  */
 
 var inflateRaw = (() => {
+  const Uint8Arr = Uint8Array;
 
-  const $fromBase64 = Uint8Array.fromBase64?.bind(Uint8Array) ?? ((b64) => {
+  const $fromBase64 = Uint8Arr.fromBase64?.bind(Uint8Arr) ?? ((b64) => {
     const binStr = atob(b64);
     let n = binStr.length;
-    const input = new Uint8Array(n);
+    const input = new Uint8Arr(n);
     while (n--) input[n] = binStr.charCodeAt(n);
     return input;
   });
@@ -39,14 +40,14 @@ var inflateRaw = (() => {
     // Output Buffer (Standard)
     let outSize = input.length * 4;
     if (outSize < 32768) outSize = 32768;
-    let out = new Uint8Array(outSize);
+    let out = new Uint8Arr(outSize);
     let outIdx = 0;
     const ensure = (need) => {
       let n = out.length;
       const required = outIdx + need;
       if (required > n) {
         do { n = (n * 3) >>> 1; } while (n < required);
-        const newOut = new Uint8Array(n);
+        const newOut = new Uint8Arr(n);
         newOut.set(out);
         out = newOut;
       }
@@ -150,7 +151,7 @@ var inflateRaw = (() => {
     };
 
     // Temp buffers
-    const ms = new Uint8Array(320);
+    const ms = new Uint8Arr(320);
     const clens = ms.subarray(0, 19);
 
     let fixedTreeOk = false;
