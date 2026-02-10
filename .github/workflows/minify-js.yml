@@ -1,0 +1,60 @@
+name: Generate Minified JS
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  minify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout main branch
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Set up Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Create minified directory
+        run: mkdir -p minified
+
+      - name: Minify JavaScript using Toptal API
+        run: |
+          curl -s -X POST \
+            --data-urlencode "input@inflate-raw.js" \
+            https://www.toptal.com/developers/javascript-minifier/api/raw \
+            > minified/inflate-raw.js
+
+      - name: Switch to generated-minified-js branch
+        run: |
+          if git show-ref --verify --quiet refs/heads/generated-minified-js; then
+            git checkout generated-minified-js
+          else
+            git checkout -b generated-minified-js
+          fi
+
+      - name: Sync branch with main
+        run: |
+          git reset --hard origin/main
+
+      - name: Add minified file
+        run: git add minified/inflate-raw.js
+
+      - name: Commit changes if needed
+        run: |
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Auto-generate minified JS"
+            git push origin generated-minified-js --force
+          fi
