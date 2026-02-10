@@ -124,6 +124,12 @@ Not ideal if you need:
 
 ---
 
+## Demo
+
+* https://raw.githack.com/js-vanilla/inflate-raw/refs/heads/main/demo.html
+
+---
+
 ## Usage
 
 ```js
