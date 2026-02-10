@@ -1,201 +1,152 @@
 # inflate-raw
 
-A **tiny, dependency-free, high-performance** vanilla JavaScript implementation of **raw DEFLATE (RFC 1951) decompression**.
+**Tiny, dependency-free vanilla JavaScript implementation** of **raw DEFLATE decompression** (RFC 1951).
 
-* **Raw inflate only** (no zlib / gzip headers)
-* **Single file**
-* **Browser & Node.js compatible**
-* Optimized for **low memory churn** and **fast startup**
+- Raw inflate only (no zlib or gzip headers/checksums)
+- Single-file, no dependencies
+- Works in browsers, Node.js, Deno, Bun, Web Workers
+- Designed for low memory usage and fast startup
 
-> Input: Base64-encoded **raw DEFLATE stream**
-> Output: Decoded UTF-8 string
-
----
-
-## Why this exists
-
-Most DEFLATE libraries (pako, fflate, zlib):
-
-* Bundle gzip/zlib header handling you may not need
-* Allocate many short-lived objects (GC pressure)
-* Are larger than necessary for *inflate-only* use cases
-
-`inflate-raw` focuses on **one job only**:
-
-> **Fast, minimal, raw DEFLATE decompression in plain JavaScript**
-
-This makes it ideal when **bundle size, cold-start time, and memory behavior** matter.
+> **CDN/minified version:** `inflateRaw(base64String) → string`  
+> **Source version:** `inflateRaw(Uint8Array) → string`
 
 ---
 
-## Key features
+## Why this library?
 
-### 🔹 Raw DEFLATE only (RFC 1951)
+Many popular DEFLATE libraries (pako, fflate, zlib) include:
 
-* No zlib header
-* No gzip wrapper
-* Exactly what many binary protocols, WASM payloads, and embedded formats use
+- Unneeded gzip/zlib wrapper support
+- Larger bundle size
+- Higher GC pressure from many allocations
 
----
+`inflate-raw` is built for one purpose only:
 
-### 🔹 Extremely small footprint
+> Minimal, fast, raw-DEFLATE-only decompression in plain JavaScript
 
-* ~4 KB minified (3.98 kB)
-* ~1.8–2.5 KB gzipped (2.22 kB)
-* No dependencies
-* No polyfills required
+Ideal when **bundle size**, **cold-start performance**, and **memory predictability** matter.
 
 ---
 
-### 🔹 Memory-efficient design
+## Key Features
 
-This implementation is **not a straight port** of zlib logic.
-
-Notable optimizations:
-
-* Reuses large typed arrays across blocks
-* Shared lookup tables for literals, distances, and code lengths
-* Minimal temporary allocations
-* Reduced GC pressure in long or repeated inflations
-
-This matters for:
-
-* Mobile browsers
-* Workers
-* Tight loops
-* Streaming-like workloads
-
----
-
-### 🔹 Fast Huffman decoding
-
-* Prebuilt LUTs with bit-reversed prefixes
-* Fixed Huffman trees cached and reused
-* Dynamic trees built in-place using shared buffers
-
-This keeps decode speed competitive with larger libraries despite the size.
-
----
-
-### 🔹 Zero dependencies, zero globals
-
-* Pure vanilla JS
-* Works in:
-
-  * Browsers
-  * Web Workers
-  * Node.js
-  * Deno / Bun
-* No reliance on `zlib`, `Buffer`, or Node internals
-
----
-
-## When should you use this?
-
-Perfect fit if you:
-
-* Receive **raw deflate** data (no wrapper)
-* Need the **smallest possible decompressor**
-* Want predictable memory usage
-* Don’t want gzip / zlib overhead
-* Are building:
-
-  * Browser libraries
-  * WASM loaders
-  * Binary protocols
-  * Embedded formats
-  * Self-contained tools
-
-Not ideal if you need:
-
-* gzip / zlib headers
-* streaming APIs
-* compression (deflate)
+- **Raw DEFLATE only** (RFC 1951) — no headers, no checksums
+- **Very small** — ~3.9–4.2 kB minified, ~1.9–2.3 kB gzipped
+- **Memory optimized** — reuses typed arrays, shared LUTs, minimal temp objects
+- **Fast Huffman decoding** — lookup-table based with bit-reversed prefixes
+- **No dependencies** — pure vanilla JS
+- **Broad compatibility** — browsers (modern), Node.js, Deno, Bun
 
 ---
 
 ## Installation
 
-### CDN (browser)
+### Via CDN (recommended for browsers)
 
 ```html
 <script src="https://cdn.jsdelivr.net/gh/js-vanilla/inflate-raw@main/inflate-raw.min.js"></script>
+```
+
+After loading, the global function `inflateRaw` becomes available.
+
+### Via source (if you prefer Uint8Array input)
+
+Download or import `inflate-raw.js` from the repo.
+
+---
+
+## Usage
+
+### CDN / Minified version (base64 input)
+
+```js
+// Base64-encoded raw DEFLATE data
+const compressedBase64 = "80jNyclXKM8vyklRBAA=";
+
+// Returns decoded UTF-8 string
+const result = inflateRaw(compressedBase64);
+
+console.log(result);  // → "Hello world!"
+```
+
+### Source version (Uint8Array input)
+
+```js
+const compressedBytes = new Uint8Array([/* raw deflate bytes */]);
+
+const result = inflateRaw(compressedBytes);  // returns string
+```
+
+**Important:** The input must be **raw DEFLATE** data (no zlib/gzip wrapper).
+
+---
+
+## API
+
+### `inflateRaw(input): string`
+
+```js
+const text = inflateRaw(base64);
 ```
 
 ---
 
 ## Demo
 
+A live demo showing both static and interactive usage is available at:
+
 * https://raw.githack.com/js-vanilla/inflate-raw/refs/heads/main/demo.html
+(or check `/demo.html` in the repository)
+
+(If the link is down, please open an issue — static hosting can be flaky.)
 
 ---
 
-## Usage
+## Size Comparison (approximate, minified + gzipped)
 
-```js
-// Base64-encoded raw DEFLATE data
-const compressed = "eJyrVkrLz1eyUkpKLFKqBQAQ9gQJ";
+| Library         | Size (min + gzip) | Raw inflate only | Dependencies |
+|-----------------|-------------------|------------------|--------------|
+| **inflate-raw** | ~1.9–2.3 kB       | Yes              | 0            |
+| tiny-inflate    | ~2.5–3 kB         | Yes              | 0            |
+| fflate (inflate-only) | ~3–4 kB     | Yes              | 0            |
+| pako            | ~12–15 kB         | No               | 0            |
 
-// Returns UTF-8 decoded string
-const result = inflateRaw(compressed);
-
-console.log(result);
-```
-
-> Input **must** be raw DEFLATE (RFC 1951), not zlib or gzip.
+*Measured on latest versions as of early 2026.*
 
 ---
 
-## API
+## Implementation Notes
 
-### `inflateRaw(base64: string): string`
+- Uses `Uint8Array`, `Uint16Array`, `Int32Array`
+- Custom bit reader with 16-bit lookahead
+- Reused memory for trees and output buffer
+- Fixed Huffman trees cached globally
+- Overlap-safe LZ77 match copying
+- No streaming support (whole input at once)
 
-* **Input:** Base64-encoded raw DEFLATE stream
-* **Output:** UTF-8 decoded string
-* Throws or produces invalid output if input is malformed
-
----
-
-## Size comparison
-
-| Library         | Min + Gzip  | Raw inflate only | Dependencies |
-| --------------- | ----------- | ---------------- | ------------ |
-| **inflate-raw** | ~1.8–2.5 KB | ✅                | 0            |
-| tiny-inflate    | ~2–3 KB     | ✅                | 0            |
-| fflate          | ~3–4 KB*    | ✅                | 0            |
-| pako            | ~12–15 KB   | ❌                | 0            |
-
-* inflate-only build
+This is **not** a full zlib replacement — it's intentionally minimal.
 
 ---
 
-## Implementation notes
+## Browser Support
 
-* Uses typed arrays (`Uint8Array`, `Uint16Array`, `Int32Array`)
-* Manual bit reader
-* LUT-based Huffman decoding
-* Fixed trees cached once
-* Dynamic trees built per block
-* Overlap-safe match copying
-
-This is designed to be **small, fast, and predictable**, not a full zlib clone.
+Works in all modern browsers (Chrome 80+, Firefox 80+, Safari 14+, Edge 80+).  
+Requires `atob`/`btoa` for base64 usage (universally available).
 
 ---
 
 ## Status
 
-Stable for valid raw DEFLATE streams.
+Stable for well-formed raw DEFLATE streams.  
+Edge-case coverage is still improving — contributions welcome!
 
-Test coverage is still growing — contributions welcome, especially:
-
-* Edge cases
-* Large blocks
-* zlib test suite vectors
+Tested against:
+- Small & medium payloads
+- Fixed/dynamic Huffman blocks
+- Back-reference corner cases
 
 ---
 
 ## License
 
-MIT
-
-
+[MIT](./LICENSE)
