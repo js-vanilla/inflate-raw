@@ -31,7 +31,7 @@ Ideal when **bundle size**, **cold-start performance**, and **memory predictabil
 ## Key Features
 
 - **Raw DEFLATE only** (RFC 1951) — no headers, no checksums
-- **Very small** — ~3.9–4.2 kB minified, ~1.9–2.3 kB gzipped
+- **Very small** — ~2–4 kB minified, ~1.5–2.3 kB gzipped
 - **Memory optimized** — reuses typed arrays, shared LUTs, minimal temp objects
 - **Fast Huffman decoding** — lookup-table based with bit-reversed prefixes
 - **No dependencies** — pure vanilla JS
@@ -44,7 +44,7 @@ Ideal when **bundle size**, **cold-start performance**, and **memory predictabil
 ### Via CDN (recommended for browsers)
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/js-vanilla/inflate-raw@main/inflate-raw.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/js-vanilla/inflate-raw@generated-minified-js/minified/inflate-raw.js"></script>
 ```
 
 After loading, the global function `inflateRaw` becomes available.
@@ -104,12 +104,12 @@ A live demo showing both static and interactive usage is available at:
 
 ## Size Comparison (approximate, minified + gzipped)
 
-| Library         | Size (min + gzip) | Raw inflate only | Dependencies |
-|-----------------|-------------------|------------------|--------------|
-| **inflate-raw** | ~1.9–2.3 kB       | Yes              | 0            |
-| tiny-inflate    | ~2.5–3 kB         | Yes              | 0            |
-| fflate (inflate-only) | ~3–4 kB     | Yes              | 0            |
-| pako            | ~12–15 kB         | No               | 0            |
+| Library               | Size (min + gzip) | **Minified size (bytes)** | Raw inflate only | Dependencies |
+| --------------------- | ----------------- | ------------------------- | ---------------- | ------------ |
+| **inflate-raw**       | ~1.5–2.3 kB       | **2,496 B**               | Yes              | 0            |
+| tiny-inflate          | ~2.5–3 kB         | **3,841 B**               | Yes              | 0            |
+| fflate (inflate-only) | ~3–4 kB           | —                         | Yes              | 0            |
+| pako                  | ~12–15 kB         | —                         | No               | 0            |
 
 *Measured on latest versions as of early 2026.*
 
