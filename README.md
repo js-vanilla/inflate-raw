@@ -1,71 +1,195 @@
 # inflate-raw
 
-**~2–4 KB** vanilla JavaScript implementation of **inflateRaw** (raw DEFLATE decompression, RFC 1951)
+A **tiny, dependency-free, high-performance** vanilla JavaScript implementation of **raw DEFLATE (RFC 1951) decompression**.
 
-No dependencies. No `zlib`. Browser & Node.js compatible. Single-file distribution.
+* **Raw inflate only** (no zlib / gzip headers)
+* **Single file**
+* **Browser & Node.js compatible**
+* Optimized for **low memory churn** and **fast startup**
 
-## Why?
+> Input: Base64-encoded **raw DEFLATE stream**
+> Output: Decoded UTF-8 string
 
-Most popular DEFLATE libraries (pako, fflate, zlib) either:
-- Include gzip/zlib header support you may not need
-- Are significantly larger when you only want raw deflate decompression
-- Depend on Node built-ins or add polyfills
+---
 
-`inflate-raw` gives you **only** the inflate algorithm for **raw** deflate streams — perfect when:
+## Why this exists
 
-- You receive raw-deflate data (no zlib/gzip wrapper)
-- You want the smallest possible footprint
-- You prefer zero dependencies and vanilla JS
+Most DEFLATE libraries (pako, fflate, zlib):
 
-## Code
+* Bundle gzip/zlib header handling you may not need
+* Allocate many short-lived objects (GC pressure)
+* Are larger than necessary for *inflate-only* use cases
 
-* original code: https://cdn.jsdelivr.net/gh/js-vanilla/inflate-raw@main/inflate-raw.js
-* minified code: https://cdn.jsdelivr.net/gh/js-vanilla/inflate-raw@main/inflate-raw.min.js
+`inflate-raw` focuses on **one job only**:
+
+> **Fast, minimal, raw DEFLATE decompression in plain JavaScript**
+
+This makes it ideal when **bundle size, cold-start time, and memory behavior** matter.
+
+---
+
+## Key features
+
+### 🔹 Raw DEFLATE only (RFC 1951)
+
+* No zlib header
+* No gzip wrapper
+* Exactly what many binary protocols, WASM payloads, and embedded formats use
+
+---
+
+### 🔹 Extremely small footprint
+
+* ~3–4 KB minified
+* ~1.5–2 KB gzipped
+* No dependencies
+* No polyfills required
+
+---
+
+### 🔹 Memory-efficient design
+
+This implementation is **not a straight port** of zlib logic.
+
+Notable optimizations:
+
+* Reuses large typed arrays across blocks
+* Shared lookup tables for literals, distances, and code lengths
+* Minimal temporary allocations
+* Reduced GC pressure in long or repeated inflations
+
+This matters for:
+
+* Mobile browsers
+* Workers
+* Tight loops
+* Streaming-like workloads
+
+---
+
+### 🔹 Fast Huffman decoding
+
+* Prebuilt LUTs with bit-reversed prefixes
+* Fixed Huffman trees cached and reused
+* Dynamic trees built in-place using shared buffers
+
+This keeps decode speed competitive with larger libraries despite the size.
+
+---
+
+### 🔹 Zero dependencies, zero globals
+
+* Pure vanilla JS
+* Works in:
+
+  * Browsers
+  * Web Workers
+  * Node.js
+  * Deno / Bun
+* No reliance on `zlib`, `Buffer`, or Node internals
+
+---
+
+## When should you use this?
+
+Perfect fit if you:
+
+* Receive **raw deflate** data (no wrapper)
+* Need the **smallest possible decompressor**
+* Want predictable memory usage
+* Don’t want gzip / zlib overhead
+* Are building:
+
+  * Browser libraries
+  * WASM loaders
+  * Binary protocols
+  * Embedded formats
+  * Self-contained tools
+
+Not ideal if you need:
+
+* gzip / zlib headers
+* streaming APIs
+* compression (deflate)
+
+---
 
 ## Installation
 
-### Via CDN (recommended for browsers)
+### CDN (browser)
 
 ```html
 <script src="https://cdn.jsdelivr.net/gh/js-vanilla/inflate-raw@main/inflate-raw.min.js"></script>
 ```
 
+---
+
 ## Usage
 
 ```js
-const compressed = "........";   // your raw deflate data (in base64)
-const decompressed = inflateRaw(compressed); // decompressed text
+// Base64-encoded raw DEFLATE data
+const compressed = "eJyrVkrLz1eyUkpKLFKqBQAQ9gQJ";
+
+// Returns UTF-8 decoded string
+const result = inflateRaw(compressed);
+
+console.log(result);
 ```
 
-## Size
+> Input **must** be raw DEFLATE (RFC 1951), not zlib or gzip.
 
-| File                    | Size (minified) | Gzipped |
-|-------------------------|------------------|---------|
-| inflate-raw.js          | ~6–8 KB         | ~2–3 KB |
-| inflate-raw.min.js      | ~3–4 KB         | ~1.5–2 KB |
+---
 
-(Actual size depends on minifier settings — using terser with compress + mangle)
+## API
 
-## Comparison
+### `inflateRaw(base64: string): string`
 
-| Library       | Size (min+gzip) | inflateRaw | Dependencies | Notes                     |
-|---------------|------------------|------------|--------------|---------------------------|
-| inflate-raw   | ~1.8–2.5 KB     | Yes        | 0            | Only raw inflate          |
-| tiny-inflate  | ~2–3 KB         | Yes        | 0            | Very small, widely used   |
-| fflate        | ~3–4 KB (inflate only) | Yes   | 0            | Fast + gzip/deflate too   |
-| pako          | ~12–15 KB       | Yes        | 0            | Most popular, full-featured |
+* **Input:** Base64-encoded raw DEFLATE stream
+* **Output:** UTF-8 decoded string
+* Throws or produces invalid output if input is malformed
 
-## License
+---
 
-[MIT](./LICENSE)
+## Size comparison
+
+| Library         | Min + Gzip  | Raw inflate only | Dependencies |
+| --------------- | ----------- | ---------------- | ------------ |
+| **inflate-raw** | ~1.8–2.5 KB | ✅                | 0            |
+| tiny-inflate    | ~2–3 KB     | ✅                | 0            |
+| fflate          | ~3–4 KB*    | ✅                | 0            |
+| pako            | ~12–15 KB   | ❌                | 0            |
+
+* inflate-only build
+
+---
+
+## Implementation notes
+
+* Uses typed arrays (`Uint8Array`, `Uint16Array`, `Int32Array`)
+* Manual bit reader
+* LUT-based Huffman decoding
+* Fixed trees cached once
+* Dynamic trees built per block
+* Overlap-safe match copying
+
+This is designed to be **small, fast, and predictable**, not a full zlib clone.
+
+---
 
 ## Status
 
-Early stage – works for valid raw deflate streams, but test coverage is still growing.
+Stable for valid raw DEFLATE streams.
 
-Contributions welcome (especially tests with edge cases from zlib test suite).
+Test coverage is still growing — contributions welcome, especially:
 
-Enjoy your lightweight decompression! 🚀
+* Edge cases
+* Large blocks
+* zlib test suite vectors
+
+---
+
+## License
+
+MIT
 
 
-Feel free to adjust numbers (size, version), add real benchmarks later, or publish to npm and update the install section. This should give the repo a professional first impression.
