@@ -14,10 +14,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout main branch
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: main
           fetch-depth: 0
 
       - name: Set up Git
@@ -25,36 +24,66 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Create minified directory
-        run: mkdir -p minified
+      - name: Fetch generated branch (if exists)
+        run: git fetch origin generated-minified-js || true
 
-      - name: Minify JavaScript using Toptal API
+      - name: Check if regeneration is needed
+        id: check
         run: |
+          SOURCE_FILE="inflate-raw.js"
+          MINIFIED_FILE="minified/inflate-raw.js"
+
+          # 1. If branch doesn't exist remotely → generate
+          if ! git ls-remote --exit-code --heads origin generated-minified-js; then
+            echo "generate=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # 2. If source file changed between main and the generated branch → generate
+          if ! git diff --quiet origin/main origin/generated-minified-js -- "$SOURCE_FILE"; then
+            echo "generate=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # 3. If minified file is missing from the generated branch → generate
+          if ! git show origin/generated-minified-js:"$MINIFIED_FILE" > /dev/null 2>&1; then
+            echo "generate=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "generate=false" >> $GITHUB_OUTPUT
+
+      - name: Recreate branch from main
+        if: steps.check.outputs.generate == 'true'
+        run: |
+          # This creates a fresh branch based on current main
+          git checkout -B generated-minified-js origin/main
+
+      - name: Generate minified file
+        if: steps.check.outputs.generate == 'true'
+        run: |
+          mkdir -p minified
+          # Send source to Toptal API and save output
           curl -s -X POST \
             --data-urlencode "input@inflate-raw.js" \
             https://www.toptal.com/developers/javascript-minifier/api/raw \
-            > minified/inflate-raw.js
-
-      - name: Switch to generated-minified-js branch
-        run: |
-          if git show-ref --verify --quiet refs/heads/generated-minified-js; then
-            git checkout generated-minified-js
-          else
-            git checkout -b generated-minified-js
+            -o minified/inflate-raw.js
+          
+          # Check if file is empty (API failure)
+          if [ ! -s minified/inflate-raw.js ]; then
+            echo "Error: Minified file is empty. Check API status."
+            exit 1
           fi
 
-      - name: Sync branch with main
+      - name: Commit and push
+        if: steps.check.outputs.generate == 'true'
         run: |
-          git reset --hard origin/main
-
-      - name: Add minified file
-        run: git add minified/inflate-raw.js
-
-      - name: Commit changes if needed
-        run: |
+          git add minified/inflate-raw.js
+          
+          # Only commit if there are actual changes to the minified file
           if git diff --cached --quiet; then
-            echo "No changes to commit"
+            echo "No changes detected in minified output."
           else
-            git commit -m "Auto-generate minified JS"
+            git commit -m "Auto-generate minified JS from $GITHUB_SHA"
             git push origin generated-minified-js --force
           fi
