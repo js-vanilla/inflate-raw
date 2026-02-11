@@ -240,18 +240,19 @@ var inflateRaw = (() => {
 
             ensure(len);
             // Match Copy
-            let pos = outIdx - dist;
-            if (len <= 8) {
-              while (len--) out[outIdx++] = out[pos++];
+            const pos = outIdx - dist;
+            // Efficiently handle RLE or very small distances
+            if (dist === 1) {
+              // Case 1: High-speed RLE (1-byte pattern)
+              out.fill(out[pos], outIdx, (outIdx += len));
             } else {
-              // Overlap safe copy
-              const end = outIdx + len;
-              while (outIdx < end) {
-                const m = end - outIdx;
-                const n = outIdx - pos;
-                const chunk = m < n ? m : n;
-                out.copyWithin(outIdx, pos, pos + chunk);
+              // Case 2: Exponential Growing Window
+              while (len > 0) {
+                let chunk = outIdx - pos;
+                if (len < chunk) chunk = len; // dist grows every iteration
+                out.set(out.subarray(pos, pos + chunk), outIdx);
                 outIdx += chunk;
+                len -= chunk;
               }
             }
           }
