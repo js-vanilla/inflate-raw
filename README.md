@@ -7,9 +7,6 @@
 - Works in browsers, Node.js, Deno, Bun, Web Workers
 - Designed for low memory usage and fast startup
 
-> **CDN/minified version:** `inflateRaw(base64String) → string`  
-> **Source version:** `inflateRaw(Uint8Array) → string`
-
 ---
 
 ## Why this library?
