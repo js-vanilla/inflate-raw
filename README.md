@@ -57,8 +57,6 @@ Download or import `inflate-raw.js` from the repo.
 
 ## Usage
 
-### CDN / Minified version (base64 input)
-
 ```js
 // Base64-encoded raw DEFLATE data
 const compressedBase64 = "80jNyclXKM8vyklRBAA=";
@@ -67,14 +65,6 @@ const compressedBase64 = "80jNyclXKM8vyklRBAA=";
 const result = inflateRaw(compressedBase64);
 
 console.log(result);  // → "Hello world!"
-```
-
-### Source version (Uint8Array input)
-
-```js
-const compressedBytes = new Uint8Array([/* raw deflate bytes */]);
-
-const result = inflateRaw(compressedBytes);  // returns string
 ```
 
 **Important:** The input must be **raw DEFLATE** data (no zlib/gzip wrapper).
